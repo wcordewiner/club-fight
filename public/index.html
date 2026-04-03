@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club Fight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: #1a5c2a;
+  background-image: radial-gradient(ellipse at center, #226b33 0%, #144820 100%);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px;
+  gap: 10px;
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+
+/* ── CARDS ── */
+.card {
+  width: 76px;
+  height: 108px;
+  background: #fff;
+  border-radius: 8px;
+  border: 2px solid #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+.card:hover { transform: translateY(-5px); box-shadow: 3px 8px 16px rgba(0,0,0,0.5); }
+.card.no-hover:hover { transform: none; box-shadow: 2px 3px 8px rgba(0,0,0,0.4); }
+
+.card .corner { font-size: 13px; font-weight: bold; line-height: 1.15; position: absolute; top: 4px; left: 5px; }
+.card .corner.bot { top: auto; bottom: 4px; left: auto; right: 5px; transform: rotate(180deg); }
+.card .mid { font-size: 1.9rem; text-align: center; }
+
+.card.red { color: #c8000a; }
+.card.black { color: #111; }
+.card.joker-card { color: #6a0dad; }
+.card.joker-card .mid { font-size: 1.4rem; }
+
+/* card states */
+.card.selected-club { border-color: #f5c518; border-width: 3px; transform: translateY(-8px); box-shadow: 0 0 14px #f5c518; }
+.card.will-clear { border-color: #00cc66; border-width: 3px; background: #f0fff0; box-shadow: 0 0 10px rgba(0,204,102,0.7); }
+.card.selected-target { border-color: #3399ff; border-width: 3px; background: #eef6ff; box-shadow: 0 0 10px rgba(51,153,255,0.7); }
+.card.inert { opacity: 0.45; cursor: not-allowed; }
+.card.inert:hover { transform: none; box-shadow: 2px 3px 8px rgba(0,0,0,0.4); }
+
+.card-placeholder {
+  width: 76px;
+  height: 108px;
+  border-radius: 8px;
+  border: 2px dashed rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+/* ── LAYOUT ── */
+.info-bar {
+  display: flex;
+  gap: 16px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 10px;
+  padding: 8px 20px;
+}
+.info-item { text-align: center; }
+.info-item .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.65; }
+.info-item .val { font-size: 1.3rem; font-weight: bold; }
+
+.grid-section { margin-top: 10px; }
+.hand-section { margin-top: 10px; }
+.action-panel { margin-top: 10px; }
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.6;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.grid-wrap { display: grid; grid-template-columns: repeat(3, 76px); gap: 8px; }
+.hand-wrap { display: flex; gap: 8px; justify-content: center; min-height: 108px; }
+
+/* ── BLOCKS BANNER ── */
+.blocks-banner {
+  background: rgba(180,0,0,0.3);
+  border: 1px solid rgba(255,80,80,0.4);
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+  text-align: center;
+  color: #ffaaaa;
+}
+
+/* ── ACTION PANEL ── */
+.action-panel {
+  background: rgba(0,0,0,0.45);
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.action-panel-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  text-align: center;
+}
+.action-buttons { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+
+button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+}
+button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 3px 8px rgba(0,0,0,0.4); }
+button:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+.btn-action { background: #e8c944; color: #222; }
+.btn-action.active { background: #f5c518; box-shadow: 0 0 10px #f5c518; }
+.btn-action.blocked-btn { background: #888; color: #ccc; text-decoration: line-through; }
+
+.btn-dir { background: #4a90d9; color: #fff; }
+.btn-dir.active { background: #2176cc; box-shadow: 0 0 8px #2176cc; }
+
+.btn-line-target { background: #5a9060; color: #fff; }
+.btn-line-target.active { background: #3a7040; box-shadow: 0 0 8px rgba(80,200,80,0.6); }
+
+.btn-confirm { background: #3cb371; color: #fff; font-size: 14px; padding: 9px 22px; }
+.btn-cancel  { background: #c0392b; color: #fff; font-size: 14px; padding: 9px 22px; }
+
+.btn-new { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 12px; padding: 6px 14px; }
+
+.confirm-row { display: flex; gap: 10px; justify-content: center; }
+
+/* ── SUM / RUN INDICATOR ── */
+.progress-indicator {
+  text-align: center;
+  font-size: 15px;
+  font-weight: bold;
+}
+.progress-indicator .ok { color: #4caf50; }
+.progress-indicator .bad { color: #ff6b6b; }
+
+/* ── STATUS BAR ── */
+.status-bar {
+  background: rgba(0,0,0,0.35);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── START SCREEN ── */
+.start-screen {
+  background: rgba(0,0,0,0.4);
+  border-radius: 16px;
+  padding: 32px 28px;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.start-screen h2 { font-size: 1.4rem; }
+.start-screen p { opacity: 0.85; line-height: 1.6; font-size: 14px; }
+.btn-start { background: #3cb371; color: #fff; font-size: 16px; padding: 12px 28px; border-radius: 8px; }
+.btn-hard { background: #c0392b; }
+
+.rules-list {
+  text-align: left;
+  font-size: 12px;
+  line-height: 2;
+  opacity: 0.8;
+  list-style: none;
+  padding: 0;
+}
+.rules-list li::before { content: '♣ '; }
+
+/* ── GAME OVER OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50;
+}
+.overlay-box {
+  background: #1d6333;
+  border: 3px solid #f5c518;
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  max-width: 360px;
+}
+.overlay-box h2 { font-size: 2.2rem; margin-bottom: 12px; }
+.overlay-box p { opacity: 0.85; margin-bottom: 24px; line-height: 1.6; }
+
+.gold { color: #f5c518; }
+</style>
+</head>
+<body>
+
+<h1>♣ Club Fight</h1>
+<div id="app"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────────────
+const SUITS = ['clubs','diamonds','hearts','spades'];
+const VALUES = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+const RANK_LABEL = v => ({1:'A',11:'J',12:'Q',13:'K'}[v] ?? String(v));
+const SUIT_SYM = {clubs:'♣',diamonds:'♦',hearts:'♥',spades:'♠'};
+const SUIT_COLOR = {clubs:'black',diamonds:'red',hearts:'red',spades:'black'};
+
+// ─────────────────────────────────────────────
+//  DECK HELPERS
+// ─────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildDecks(jokerCount) {
+  const clubs = shuffle(VALUES.map(v => ({suit:'clubs', value:v})));
+  const rest = [];
+  for (const s of ['diamonds','hearts','spades'])
+    for (const v of VALUES)
+      rest.push({suit:s, value:v});
+  for (let i = 0; i < jokerCount; i++) rest.push({suit:'joker', value:null});
+  return { clubs, gridDeck: shuffle(rest) };
+}
+
+// ─────────────────────────────────────────────
+//  GAME STATE
+// ─────────────────────────────────────────────
+let G = null; // global game state
+
+function newGameState(jokers) {
+  const {clubs, gridDeck} = buildDecks(jokers);
+  const grid = gridDeck.splice(0, 9);
+  while (grid.length < 9) grid.push(null);
+  const hand = clubs.splice(0, 4);
+  return {
+    jokers,
+    clubs,       // club draw pile
+    hand,        // clubs in hand
+    gridDeck,    // non-club draw pile
+    grid,        // 9-element flat array (row-major), null = empty
+    turn: 1,
+    // UI state
+    clubIdx:   null,   // selected hand index
+    action:    null,   // 'match'|'sum'|'any'|'line'|'updown'|'run'
+    targets:   [],     // selected grid indices
+    lineChoice: null,  // 'r0'|'r1'|'r2'|'c0'|'c1'|'c2'
+    upDir:     null,   // 'lower'|'higher'
+    msg: 'Select a ♣ club card from your hand.',
+  };
+}
+
+// ─────────────────────────────────────────────
+//  GRID QUERIES
+// ─────────────────────────────────────────────
+function suitCount(grid, suit) {
+  return grid.filter(c => c && c.suit === suit).length;
+}
+
+function blocked(grid, action) {
+  if (action === 'line'   && suitCount(grid,'diamonds') >= 3) return true;
+  if (action === 'updown' && suitCount(grid,'spades')   >= 3) return true;
+  if (action === 'run'    && suitCount(grid,'hearts')   >= 3) return true;
+  return false;
+}
+
+function rowIdxs(r) { return [r*3, r*3+1, r*3+2]; }
+function colIdxs(c) { return [c,   c+3,   c+6  ]; }
+
+function lineGroupIdxs(key) {
+  if (key[0]==='r') return rowIdxs(+key[1]);
+  return colIdxs(+key[1]);
+}
+
+// ─────────────────────────────────────────────
+//  ACTION VALIDITY
+// ─────────────────────────────────────────────
+function canUseAction(g, action) {
+  const club = g.hand[g.clubIdx];
+  const cv = club.value;
+
+  switch(action) {
+    case 'match':
+      return g.grid.some(c => c && c.suit !== 'joker' && c.value === cv);
+
+    case 'sum': {
+      const vals = g.grid.filter(c => c && c.suit !== 'joker').map(c => c.value);
+      return subsetSum(vals, cv);
+    }
+
+    case 'any':
+      return g.grid.some(c => c !== null);
+
+    case 'line': {
+      if (blocked(g.grid, 'line')) return false;
+      for (let r=0;r<3;r++)
+        if (rowIdxs(r).some(i => g.grid[i] && g.grid[i].suit!=='joker' && g.grid[i].value===cv)) return true;
+      for (let c=0;c<3;c++)
+        if (colIdxs(c).some(i => g.grid[i] && g.grid[i].suit!=='joker' && g.grid[i].value===cv)) return true;
+      return false;
+    }
+
+    case 'updown': {
+      if (blocked(g.grid, 'updown')) return false;
+      if (cv < 2 || cv > 12) return false; // Ace & King can't use this
+      const hasNonJoker = g.grid.some(c => c && c.suit!=='joker');
+      if (!hasNonJoker) return false;
+      if (cv <= 7 && g.grid.some(c => c && c.suit!=='joker' && c.value < cv)) return true;
+      if (cv >= 7 && g.grid.some(c => c && c.suit!=='joker' && c.value > cv)) return true;
+      return false;
+    }
+
+    case 'run': {
+      if (blocked(g.grid, 'run')) return false;
+      return g.grid.some(c => c && c.suit!=='joker');
+    }
+  }
+  return false;
+}
+
+function subsetSum(vals, target) {
+  if (target <= 0) return false;
+  const n = vals.length;
+  for (let mask=1; mask<(1<<n); mask++) {
+    let s=0;
+    for (let i=0;i<n;i++) if (mask&(1<<i)) s+=vals[i];
+    if (s===target) return true;
+  }
+  return false;
+}
+
+function isValidRun(selectedVals, clubVal) {
+  if (selectedVals.length === 0) return false;
+  const all = [...selectedVals, clubVal].sort((a,b)=>a-b);
+  // no duplicates, all consecutive
+  for (let i=1;i<all.length;i++)
+    if (all[i]!==all[i-1]+1) return false;
+  return true;
+}
+
+// ─────────────────────────────────────────────
+//  CONFIRM GATE
+// ─────────────────────────────────────────────
+function canConfirm(g) {
+  const cv = g.hand[g.clubIdx].value;
+  switch(g.action) {
+    case 'match': return true;
+    case 'sum': {
+      const s = g.targets.reduce((a,i) => a + (g.grid[i]?.value||0), 0);
+      return g.targets.length > 0 && s === cv;
+    }
+    case 'any':   return g.targets.length === 1;
+    case 'line':  return g.lineChoice !== null;
+    case 'updown': {
+      if (cv===7) return g.upDir !== null;
+      return true;
+    }
+    case 'run': {
+      const vals = g.targets.map(i => g.grid[i]?.value).filter(Boolean);
+      return isValidRun(vals, cv);
+    }
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────────
+//  PREVIEW (indices that will be cleared)
+// ─────────────────────────────────────────────
+function previewClear(g) {
+  const cv = g.hand[g.clubIdx].value;
+  switch(g.action) {
+    case 'match':
+      return g.grid.map((c,i) => c && c.suit!=='joker' && c.value===cv ? i : -1).filter(i=>i>=0);
+    case 'updown': {
+      const dir = g.upDir || (cv<7?'lower':cv>7?'higher':null);
+      if (!dir) return [];
+      return g.grid.map((c,i) => {
+        if (!c || c.suit==='joker') return -1;
+        if (dir==='lower' && c.value<cv) return i;
+        if (dir==='higher' && c.value>cv) return i;
+        return -1;
+      }).filter(i=>i>=0);
+    }
+    case 'line': {
+      if (!g.lineChoice) return [];
+      return lineGroupIdxs(g.lineChoice).filter(i => g.grid[i] !== null);
+    }
+    case 'sum':
+    case 'any':
+    case 'run':
+      return g.targets;
+    default: return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+//  EXECUTE
+// ─────────────────────────────────────────────
+function executeAction(g) {
+  const cv = g.hand[g.clubIdx].value;
+  let toClear = previewClear(g);
+
+  // Handle updown direction finalization
+  if (g.action === 'updown') {
+    const dir = g.upDir || (cv<7?'lower':'higher');
+    toClear = g.grid.map((c,i) => {
+      if (!c || c.suit==='joker') return -1;
+      if (dir==='lower' && c.value<cv) return i;
+      if (dir==='higher' && c.value>cv) return i;
+      return -1;
+    }).filter(i=>i>=0);
+  }
+
+  for (const i of toClear) g.grid[i] = null;
+  g.hand.splice(g.clubIdx, 1);
+}
+
+function refillGrid(g) {
+  for (let i=0;i<9;i++) {
+    if (g.grid[i]===null && g.gridDeck.length>0)
+      g.grid[i] = g.gridDeck.shift();
+  }
+}
+
+function refillHand(g) {
+  while (g.hand.length < 4 && g.clubs.length > 0)
+    g.hand.push(g.clubs.shift());
+}
+
+function checkWin(g)  { return g.grid.every(c=>c===null) && g.gridDeck.length===0; }
+function checkLose(g) { return g.hand.length===0 && g.clubs.length===0 && !checkWin(g); }
+
+// ─────────────────────────────────────────────
+//  RENDER HELPERS
+// ─────────────────────────────────────────────
+function cardHTML(card, extraClass='', onclick='') {
+  if (!card) return `<div class="card-placeholder"></div>`;
+  if (card.suit === 'joker') {
+    return `<div class="card joker-card no-hover ${extraClass}" onclick="${onclick}">
+      <div class="corner">Jkr<br>🃏</div>
+      <div class="mid">🃏</div>
+      <div class="corner bot">Jkr<br>🃏</div>
+    </div>`;
+  }
+  const color = SUIT_COLOR[card.suit];
+  const rank = RANK_LABEL(card.value);
+  const sym = SUIT_SYM[card.suit];
+  return `<div class="card ${color} ${extraClass}" onclick="${onclick}">
+    <div class="corner">${rank}<br>${sym}</div>
+    <div class="mid">${sym}</div>
+    <div class="corner bot">${rank}<br>${sym}</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER GAME
+// ─────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (!G) { renderStart(app); return; }
+
+  const g = G;
+  const preview = new Set(g.action ? previewClear(g) : []);
+  const selected = new Set(g.targets);
+  const diamBlocked = suitCount(g.grid,'diamonds')>=3;
+  const spadBlocked = suitCount(g.grid,'spades')>=3;
+  const heartBlocked= suitCount(g.grid,'hearts')>=3;
+
+  // Info bar
+  let html = `
+    <div class="info-bar">
+      <div class="info-item"><div class="lbl">Turn</div><div class="val">${g.turn}/13</div></div>
+      <div class="info-item"><div class="lbl">Grid Deck</div><div class="val">${g.gridDeck.length}</div></div>
+      <div class="info-item"><div class="lbl">Club Deck</div><div class="val">${g.clubs.length}</div></div>
+      <div class="info-item"><div class="lbl">Hand</div><div class="val">${g.hand.length}</div></div>
+    </div>`;
+
+  // Block indicators
+  const blockMsgs = [];
+  if (diamBlocked) blockMsgs.push('♦ Line blocked (3+ diamonds)');
+  if (spadBlocked) blockMsgs.push('♠ Up/Down blocked (3+ spades)');
+  if (heartBlocked) blockMsgs.push('♥ Run blocked (3+ hearts)');
+  if (blockMsgs.length)
+    html += `<div class="blocks-banner">${blockMsgs.join(' &nbsp;|&nbsp; ')}</div>`;
+
+  // Grid
+  html += `<div class="grid-section"><div class="section-label">Grid</div><div class="grid-wrap">`;
+  for (let i=0;i<9;i++) {
+    const card = g.grid[i];
+    let cls = '';
+    if (preview.has(i)) cls = 'will-clear';
+    else if (selected.has(i)) cls = 'selected-target';
+    else if (g.action && card && !canClickGrid(i)) cls = 'inert';
+    html += cardHTML(card, cls, card && canClickGrid(i) ? `clickGrid(${i})` : '');
+  }
+  html += `</div></div>`;
+
+  // Hand
+  html += `<div class="hand-section"><div class="section-label">Your Hand (♣ Clubs)</div><div class="hand-wrap">`;
+  for (let i=0;i<g.hand.length;i++) {
+    const cls = (g.clubIdx===i) ? 'selected-club' : '';
+    html += cardHTML(g.hand[i], cls, `clickHand(${i})`);
+  }
+  // Empty slots
+  for (let i=g.hand.length;i<4;i++) html += `<div class="card-placeholder"></div>`;
+  html += `</div></div>`;
+
+  // Action panel (always visible)
+  {
+    const club = g.clubIdx !== null ? g.hand[g.clubIdx] : null;
+    const cv = club ? club.value : null;
+
+    html += `<div class="action-panel">`;
+    html += `<div class="action-panel-title">${club ? `Discarding ${RANK_LABEL(cv)}♣ — Choose action` : 'Select a ♣ club from your hand first'}</div>`;
+    html += `<div class="action-buttons">`;
+
+    const actions = [
+      {id:'match',  label:'Match'},
+      {id:'sum',    label:'Sum'},
+      {id:'any',    label:'Any'},
+      {id:'line',   label:'Line',    blockIf: diamBlocked},
+      {id:'updown', label:'Up/Down', blockIf: spadBlocked},
+      {id:'run',    label:'Run',     blockIf: heartBlocked},
+    ];
+
+    for (const a of actions) {
+      const isActive = g.action===a.id;
+      const valid = club && canUseAction(g, a.id);
+      let cls = 'btn-action';
+      if (isActive) cls += ' active';
+      if (a.blockIf) cls += ' blocked-btn';
+      html += `<button class="${cls}" onclick="clickAction('${a.id}')" ${valid?'':'disabled'}
+               title="${a.blockIf?'BLOCKED':''}">
+               ${a.label}${a.blockIf?' ⊘':''}
+               </button>`;
+    }
+    html += `</div>`;
+
+    // Action-specific secondary UI
+    if (g.action) {
+      // Line: row/col buttons
+      if (g.action === 'line') {
+        const lineKeys = [
+          {key:'r0',label:'Row 1'},{key:'r1',label:'Row 2'},{key:'r2',label:'Row 3'},
+          {key:'c0',label:'Col 1'},{key:'c1',label:'Col 2'},{key:'c2',label:'Col 3'},
+        ];
+        html += `<div class="action-buttons">`;
+        for (const lk of lineKeys) {
+          const idxs = lineGroupIdxs(lk.key);
+          const hasMatch = idxs.some(i => g.grid[i] && g.grid[i].suit!=='joker' && g.grid[i].value===cv);
+          const isActive = g.lineChoice===lk.key;
+          html += `<button class="btn-line-target${isActive?' active':''}"
+                   onclick="clickLine('${lk.key}')" ${hasMatch?'':'disabled'}>${lk.label}</button>`;
+        }
+        html += `</div>`;
+      }
+
+      // Up/Down: direction (for 7, or always show for clarity)
+      if (g.action === 'updown') {
+        if (cv === 7) {
+          html += `<div style="display:flex;gap:8px;justify-content:center">
+            <button class="btn-dir${g.upDir==='lower'?' active':''}" onclick="clickDir('lower')">▼ Lower (&lt;7)</button>
+            <button class="btn-dir${g.upDir==='higher'?' active':''}" onclick="clickDir('higher')">▲ Higher (&gt;7)</button>
+          </div>`;
+        } else {
+          const dir = cv<7?'lower':'higher';
+          html += `<div style="text-align:center;font-size:12px;opacity:0.75">
+            Will clear all cards with ${dir==='lower'?'value &lt;':'value &gt;'} ${cv}
+          </div>`;
+        }
+      }
+
+      // Sum: running counter
+      if (g.action === 'sum') {
+        const sum = g.targets.reduce((s,i) => s+(g.grid[i]?.value||0), 0);
+        const ok = sum===cv && g.targets.length>0;
+        html += `<div class="progress-indicator">
+          Sum: <span class="${ok?'ok':'bad'}">${sum}</span> / ${cv}
+          ${ok ? ' ✓' : ''}
+        </div>`;
+      }
+
+      // Run: validation status
+      if (g.action === 'run' && g.targets.length > 0) {
+        const vals = g.targets.map(i => g.grid[i]?.value).filter(Boolean);
+        const valid = isValidRun(vals, cv);
+        const seq = [...new Set([...vals, cv])].sort((a,b)=>a-b).map(RANK_LABEL).join(' - ');
+        html += `<div class="progress-indicator">
+          Sequence: <span class="${valid?'ok':'bad'}">${seq}</span>
+          ${valid ? ' ✓' : ' (not consecutive)'}
+        </div>`;
+      }
+
+      // Confirm / Cancel
+      html += `<div class="confirm-row">
+        <button class="btn-confirm" onclick="onConfirm()" ${canConfirm(g)?'':'disabled'}>✓ Confirm</button>
+        <button class="btn-cancel"  onclick="onCancel()">✗ Cancel</button>
+      </div>`;
+    }
+
+    html += `</div>`; // action-panel
+  }
+
+  // Status
+  html += `<div class="status-bar" style="margin-top:10px">${g.msg}</div>`;
+
+  // New game
+  html += `<button class="btn-new" onclick="showStart()" style="margin-top:10px;display:block;margin-left:auto;margin-right:auto">New Game</button>`;
+
+  app.innerHTML = html;
+
+  // Show game-over overlay on top
+  if (checkWin(g) || checkLose(g)) renderGameOver(app, checkWin(g));
+}
+
+// ─────────────────────────────────────────────
+//  CAN CLICK GRID CARD?
+// ─────────────────────────────────────────────
+function canClickGrid(idx) {
+  if (!G || G.action===null) return false;
+  const g = G;
+  const card = g.grid[idx];
+  if (!card) return false;
+  const cv = g.hand[g.clubIdx].value;
+
+  switch(g.action) {
+    case 'match':  return false; // auto
+    case 'updown': return false; // auto
+    case 'line':   return false; // use buttons
+    case 'any':    return true;
+    case 'sum':    return card.suit !== 'joker'; // jokers have no value
+    case 'run':    return card.suit !== 'joker' && card.value !== cv; // no dupes with club
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────────
+//  EVENT HANDLERS
+// ─────────────────────────────────────────────
+function clickHand(idx) {
+  G.clubIdx = idx;
+  G.action = null;
+  G.targets = [];
+  G.lineChoice = null;
+  G.upDir = null;
+  const club = G.hand[idx];
+  G.msg = `${RANK_LABEL(club.value)}♣ selected. Choose an action.`;
+  render();
+}
+
+function clickAction(action) {
+  if (G.clubIdx === null) return;
+  G.action = action;
+  G.targets = [];
+  G.lineChoice = null;
+  G.upDir = null;
+
+  const cv = G.hand[G.clubIdx].value;
+  // Auto-set direction for updown when not 7
+  if (action==='updown') {
+    if (cv<7) G.upDir='lower';
+    else if (cv>7) G.upDir='higher';
+  }
+
+  const msgs = {
+    match: `Match: will clear all ${RANK_LABEL(cv)}-value cards from the grid. Confirm?`,
+    sum:   `Sum: click grid cards that add up to ${cv}, then confirm.`,
+    any:   `Any: click one grid card to clear (Jokers allowed).`,
+    line:  `Line: select a row or column containing a ${RANK_LABEL(cv)}.`,
+    updown: cv===7 ? `Up/Down: choose direction (lower or higher than 7), then confirm.`
+                   : `Up/Down: will clear all cards ${cv<7?'below':'above'} ${cv}. Confirm?`,
+    run:   `Run: click grid cards forming a consecutive sequence with ${RANK_LABEL(cv)} (${cv}).`,
+  };
+  G.msg = msgs[action];
+  render();
+}
+
+function clickGrid(idx) {
+  if (!G || !canClickGrid(idx)) return;
+  const card = G.grid[idx];
+  const a = G.action;
+
+  if (a==='any') {
+    G.targets = G.targets.includes(idx) ? [] : [idx];
+  } else if (a==='sum' || a==='run') {
+    const pos = G.targets.indexOf(idx);
+    if (pos>=0) G.targets.splice(pos,1);
+    else G.targets.push(idx);
+  }
+  render();
+}
+
+function clickLine(key) {
+  G.lineChoice = key;
+  const label = key[0]==='r' ? `Row ${+key[1]+1}` : `Col ${+key[1]+1}`;
+  G.msg = `Line: ${label} selected. Confirm to clear it.`;
+  render();
+}
+
+function clickDir(dir) {
+  G.upDir = dir;
+  const cv = G.hand[G.clubIdx].value;
+  G.msg = `Up/Down: will clear all cards ${dir==='lower'?'below':'above'} ${cv}. Confirm?`;
+  render();
+}
+
+function onConfirm() {
+  if (!canConfirm(G)) return;
+  executeAction(G);
+  refillGrid(G);
+  refillHand(G);
+  G.turn++;
+  G.clubIdx = null;
+  G.action = null;
+  G.targets = [];
+  G.lineChoice = null;
+  G.upDir = null;
+  if (checkWin(G) || checkLose(G)) {
+    render();
+    return;
+  }
+  G.msg = 'Select a ♣ club card from your hand.';
+  render();
+}
+
+function onCancel() {
+  G.action = null;
+  G.targets = [];
+  G.lineChoice = null;
+  G.upDir = null;
+  G.msg = 'Action cancelled. Choose a new action.';
+  render();
+}
+
+// ─────────────────────────────────────────────
+//  START / GAME OVER SCREENS
+// ─────────────────────────────────────────────
+function renderStart(app) {
+  app.innerHTML = `
+    <div class="start-screen">
+      <h2>♣ Welcome to Club Fight</h2>
+      <p>A solo card game. Use your 13 clubs to clear<br>the 3×3 grid before you run out of cards.</p>
+      <button class="btn-start" onclick="startGame(1)">Easy — 1 Joker</button>
+      <button class="btn-start btn-hard" onclick="startGame(2)">Hard — 2 Jokers</button>
+      <div style="text-align:left">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.6;margin-bottom:6px">Actions</div>
+        <ul class="rules-list">
+          <li><b>Match</b> — clear all grid cards with the same value</li>
+          <li><b>Sum</b> — clear cards whose values add up to your club</li>
+          <li><b>Any</b> — clear any one card (including Jokers)</li>
+          <li><b>Line</b> — clear a row/col containing your club's value <span style="color:#ffaaaa">(blocked by 3+ ♦)</span></li>
+          <li><b>Up/Down</b> — 2–7: clear all lower; 7–Q: clear all higher <span style="color:#ffaaaa">(blocked by 3+ ♠)</span></li>
+          <li><b>Run</b> — clear cards in a consecutive sequence with your club <span style="color:#ffaaaa">(blocked by 3+ ♥)</span></li>
+        </ul>
+        <div style="font-size:11px;opacity:0.6;margin-top:8px">
+          A=1, J=11, Q=12, K=13 &nbsp;·&nbsp; Jokers: only Any or Line can clear them
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderGameOver(app, won) {
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="overlay-box">
+      <h2>${won ? '🏆 You Win!' : '💀 You Lose'}</h2>
+      <p>${won
+        ? 'You cleared the entire grid!<br>Congratulations!'
+        : 'You ran out of club cards before clearing the grid.'}</p>
+      <button class="btn-start" onclick="startGame(${G.jokers})">Play Again</button>
+      &nbsp;
+      <button class="btn-start" style="background:#555" onclick="showStart()">Menu</button>
+    </div>`;
+  app.appendChild(overlay);
+}
+
+function startGame(jokers) {
+  G = newGameState(jokers);
+  render();
+}
+
+function showStart() {
+  G = null;
+  render();
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
