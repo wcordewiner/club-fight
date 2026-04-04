@@ -283,7 +283,7 @@ function newGameState(jokers) {
   const {clubs, gridDeck} = buildDecks(jokers);
   const grid = gridDeck.splice(0, 9);
   while (grid.length < 9) grid.push(null);
-  const hand = clubs.splice(0, 4);
+  const hand = clubs.splice(0, 4).sort((a, b) => a.value - b.value);
   return {
     jokers,
     clubs,       // club draw pile
@@ -297,6 +297,7 @@ function newGameState(jokers) {
     targets:   [],     // selected grid indices
     lineChoice: null,  // 'r0'|'r1'|'r2'|'c0'|'c1'|'c2'
     upDir:     null,   // 'lower'|'higher'
+    sortDir:   'desc', // 'asc'|'desc'
     msg: 'Select a ♣ club card from your hand.',
   };
 }
@@ -539,14 +540,19 @@ function render() {
   html += `</div></div>`;
 
   // Hand
-  html += `<div class="hand-section"><div class="section-label">Your Hand (♣ Clubs)</div><div class="hand-wrap">`;
+  html += `<div class="hand-section">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px">
+      <div class="section-label" style="margin-bottom:0">Your Hand (♣ Clubs)</div>
+      <button class="btn-new" style="font-size:11px;padding:3px 9px" onclick="sortHand()">${g.sortDir === 'asc' ? '→ Sort' : '← Sort'}</button>
+    </div>
+    <div class="hand-wrap">`;
   for (let i=0;i<g.hand.length;i++) {
     const cls = (g.clubIdx===i) ? 'selected-club' : '';
     html += cardHTML(g.hand[i], cls, `clickHand(${i})`);
   }
   // Empty slots
   for (let i=g.hand.length;i<4;i++) html += `<div class="card-placeholder"></div>`;
-  html += `</div></div>`;
+  html += `</div></div>`; // hand-wrap + hand-section
 
   // Action panel (always visible)
   {
@@ -688,6 +694,14 @@ function canClickGrid(idx) {
 // ─────────────────────────────────────────────
 //  EVENT HANDLERS
 // ─────────────────────────────────────────────
+function sortHand() {
+  const selected = G.clubIdx !== null ? G.hand[G.clubIdx] : null;
+  G.hand.sort((a, b) => G.sortDir === 'asc' ? a.value - b.value : b.value - a.value);
+  G.sortDir = G.sortDir === 'asc' ? 'desc' : 'asc';
+  if (selected !== null) G.clubIdx = G.hand.indexOf(selected);
+  render();
+}
+
 function clickHand(idx) {
   G.clubIdx = idx;
   G.action = null;
