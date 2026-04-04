@@ -10,3 +10,7 @@ Club Fight is a quick solitaire game played with a traditional deck of cards. Us
 # Club Fight Rules Overview
 
 Rules for the game are [here](rules.md)
+
+# Play online
+
+You can play the game [here](https://wcordewiner.github.io/club-fight/)
