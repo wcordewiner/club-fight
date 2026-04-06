@@ -477,6 +477,8 @@ function refillGrid(g) {
 function refillHand(g) {
   while (g.hand.length < 4 && g.clubs.length > 0)
     g.hand.push(g.clubs.shift());
+  const dir = g.sortDir === 'desc' ? 'asc' : 'desc'; // sortDir is the *next* direction, so invert
+  g.hand.sort((a, b) => dir === 'asc' ? a.value - b.value : b.value - a.value);
 }
 
 function checkWin(g)  { return g.grid.every(c=>c===null) && g.gridDeck.length===0; }
