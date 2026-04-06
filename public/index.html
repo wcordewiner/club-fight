@@ -87,7 +87,7 @@ h1 {
 .info-item .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.65; }
 .info-item .val { font-size: 1.3rem; font-weight: bold; }
 
-.grid-section { margin-top: 10px; }
+.grid-section { margin-top: 10px; display: flex; flex-direction: column; align-items: center; }
 .hand-section { margin-top: 10px; }
 .action-panel { margin-top: 10px; }
 
@@ -526,14 +526,6 @@ function render() {
       <div class="info-item"><div class="lbl">Hand</div><div class="val">${g.hand.length}</div></div>
     </div>`;
 
-  // Block indicators
-  const blockMsgs = [];
-  if (diamBlocked) blockMsgs.push('♦ Line blocked (3+ diamonds)');
-  if (spadBlocked) blockMsgs.push('♠ Up/Down blocked (3+ spades)');
-  if (heartBlocked) blockMsgs.push('♥ Run blocked (3+ hearts)');
-  if (blockMsgs.length)
-    html += `<div class="blocks-banner">${blockMsgs.join(' &nbsp;|&nbsp; ')}</div>`;
-
   // Grid
   html += `<div class="grid-section"><div class="section-label">Grid</div><div class="grid-wrap">`;
   for (let i=0;i<9;i++) {
@@ -651,6 +643,14 @@ function render() {
 
     html += `</div>`; // action-panel
   }
+
+  // Block indicators
+  const blockMsgs = [];
+  if (diamBlocked) blockMsgs.push('♦ Line blocked (3+ diamonds)');
+  if (spadBlocked) blockMsgs.push('♠ Up/Down blocked (3+ spades)');
+  if (heartBlocked) blockMsgs.push('♥ Run blocked (3+ hearts)');
+  if (blockMsgs.length)
+    html += `<div class="blocks-banner">${blockMsgs.join(' &nbsp;|&nbsp; ')}</div>`;
 
   // Status
   html += `<div class="status-bar" style="margin-top:10px">${g.msg}</div>`;
