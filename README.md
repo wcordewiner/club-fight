@@ -14,3 +14,5 @@ Rules for the game are [here](rules.md)
 # Play online
 
 You can play the game [here](https://wcordewiner.github.io/club-fight/)
+
+![Screenshot](.github/images/screenshot.png)
