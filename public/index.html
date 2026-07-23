@@ -235,6 +235,34 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important
 .overlay-box p { opacity: 0.85; margin-bottom: 24px; line-height: 1.6; }
 
 .gold { color: #f5c518; }
+
+/* ── INFO MODAL (discards / remaining) ── */
+.modal-box {
+  max-width: 640px;
+  width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.modal-box h2 { font-size: 1.4rem; text-align: center; margin-bottom: 16px; }
+.modal-section { margin-bottom: 18px; }
+.modal-section-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.modal-card-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.modal-empty { opacity: 0.5; font-size: 13px; font-style: italic; }
+
+.card.modal-mini { width: 46px; height: 64px; border-width: 1px; }
+.card.modal-mini .corner { font-size: 9px; top: 2px; left: 3px; }
+.card.modal-mini .corner.bot { bottom: 2px; right: 3px; }
+.card.modal-mini .mid { font-size: 1.1rem; }
+.card.modal-mini.joker-card .mid { font-size: 0.8rem; }
+
+.info-actions { display: flex; gap: 8px; }
 </style>
 </head>
 <body>
@@ -290,6 +318,8 @@ function newGameState(jokers) {
     hand,        // clubs in hand
     gridDeck,    // non-club draw pile
     grid,        // 9-element flat array (row-major), null = empty
+    gridDiscards: [], // cards cleared from the grid over the course of the game
+    clubDiscards: [], // clubs played from hand over the course of the game
     turn: 1,
     // UI state
     clubIdx:   null,   // selected hand index
@@ -298,6 +328,7 @@ function newGameState(jokers) {
     lineChoice: null,  // 'r0'|'r1'|'r2'|'c0'|'c1'|'c2'
     upDir:     null,   // 'lower'|'higher'
     sortDir:   'desc', // 'asc'|'desc'
+    viewModal: null,   // null|'discards'|'remaining'
     msg: 'Select a ♣ club card from your hand.',
   };
 }
@@ -463,7 +494,11 @@ function executeAction(g) {
     }).filter(i=>i>=0);
   }
 
-  for (const i of toClear) g.grid[i] = null;
+  for (const i of toClear) {
+    g.gridDiscards.push(g.grid[i]);
+    g.grid[i] = null;
+  }
+  g.clubDiscards.push(g.hand[g.clubIdx]);
   g.hand.splice(g.clubIdx, 1);
 }
 
@@ -483,6 +518,15 @@ function refillHand(g) {
 
 function checkWin(g)  { return g.grid.every(c=>c===null) && g.gridDeck.length===0; }
 function checkLose(g) { return g.hand.length===0 && g.clubs.length===0 && !checkWin(g); }
+
+// Groups cards by suit/value for display, so browsing a pile never reveals draw order.
+const SUIT_SORT_ORDER = {clubs:0, diamonds:1, hearts:2, spades:3, joker:4};
+function sortCards(cards) {
+  return [...cards].sort((a,b) => {
+    if (a.suit !== b.suit) return SUIT_SORT_ORDER[a.suit] - SUIT_SORT_ORDER[b.suit];
+    return (a.value||0) - (b.value||0);
+  });
+}
 
 // ─────────────────────────────────────────────
 //  RENDER HELPERS
@@ -527,6 +571,10 @@ function render() {
       <div class="info-item"><div class="lbl">Grid Deck</div><div class="val">${g.gridDeck.length}</div></div>
       <div class="info-item"><div class="lbl">Club Deck</div><div class="val">${g.clubs.length}</div></div>
       <div class="info-item"><div class="lbl">Hand</div><div class="val">${g.hand.length}</div></div>
+    </div>
+    <div class="info-actions">
+      <button class="btn-new" onclick="openModal('discards')">📜 Discards</button>
+      <button class="btn-new" onclick="openModal('remaining')">🔍 Remaining</button>
     </div>`;
 
   // Grid
@@ -670,6 +718,54 @@ function render() {
 
   // Show game-over overlay on top
   if (checkWin(g) || checkLose(g)) renderGameOver(app, checkWin(g));
+  else if (g.viewModal) renderInfoModal(app);
+}
+
+// ─────────────────────────────────────────────
+//  INFO MODAL (discards / remaining draw piles)
+// ─────────────────────────────────────────────
+function renderInfoModal(app) {
+  const g = G;
+  let title, sections;
+  if (g.viewModal === 'discards') {
+    title = 'Discard Piles';
+    sections = [
+      {label: `Grid Discards — ${g.gridDiscards.length} cleared`, cards: sortCards(g.gridDiscards)},
+      {label: `Club Discards — ${g.clubDiscards.length} played`, cards: sortCards(g.clubDiscards)},
+    ];
+  } else {
+    title = 'Remaining in Draw Piles';
+    sections = [
+      {label: `Grid Deck — ${g.gridDeck.length} left`, cards: sortCards(g.gridDeck)},
+      {label: `Club Deck — ${g.clubs.length} left`, cards: sortCards(g.clubs)},
+    ];
+  }
+
+  let html = `<div class="overlay-box modal-box"><h2>${title}</h2>`;
+  for (const s of sections) {
+    html += `<div class="modal-section"><div class="modal-section-label">${s.label}</div>`;
+    html += s.cards.length
+      ? `<div class="modal-card-list">${s.cards.map(c => cardHTML(c, 'no-hover modal-mini')).join('')}</div>`
+      : `<div class="modal-empty">None</div>`;
+    html += `</div>`;
+  }
+  html += `<button class="btn-new" onclick="closeModal()">Close</button></div>`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+  overlay.innerHTML = html;
+  app.appendChild(overlay);
+}
+
+function openModal(kind) {
+  G.viewModal = kind;
+  render();
+}
+
+function closeModal() {
+  G.viewModal = null;
+  render();
 }
 
 // ─────────────────────────────────────────────
